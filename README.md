@@ -54,10 +54,27 @@ export TF_VAR_pull_secret="$(cat pull-secret.txt)"
 
 ```bash
 az login
+```
+
+After logging in, verify which subscription is active:
+
+```bash
+az account list -o table
+```
+
+If the correct subscription is already marked `IsDefault = True`, you are ready to go — Terraform will use it automatically. Otherwise, switch to the desired subscription:
+
+```bash
 az account set --subscription "<SUBSCRIPTION_ID>"
 ```
 
-Terraform's AzureRM provider picks up the CLI session automatically.
+You can confirm the active subscription at any time with:
+
+```bash
+az account show -o table
+```
+
+Terraform's AzureRM provider picks up the CLI session automatically, so no extra configuration is needed for local use.
 
 #### Service principal (CI / automation)
 
