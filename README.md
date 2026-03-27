@@ -127,27 +127,24 @@ export TF_VAR_service_principal_client_id=$(echo "$SP_JSON" | jq -r .appId)
 export TF_VAR_service_principal_client_secret=$(echo "$SP_JSON" | jq -r .password)
 ```
 
-The ARO resource provider service principal (well-known ID `f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875`) and your cluster service principal both need Network Contributor so they can manage the VNet and subnets. Use subscription scope so the roles are in place before Terraform creates the resource group:
+For **greenfield** deployments, that's it — Terraform automatically creates VNet-scoped Network Contributor role assignments for the cluster SP and the ARO RP, and waits for propagation before creating the cluster.
+
+For **BYO VNet** deployments, you must manually grant Network Contributor on the VNet to both service principals before running apply:
 
 ```bash
-# Get the ARO RP service principal object ID
 ARO_RP_OBJ_ID=$(az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
 
-# Grant Network Contributor to the ARO RP at subscription scope
 az role assignment create \
   --assignee-object-id "$ARO_RP_OBJ_ID" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
-  --scope /subscriptions/$SUBSCRIPTION_ID
+  --scope "$TF_VAR_vnet_id"
 
-# Grant Network Contributor to the cluster SP at subscription scope
 az role assignment create \
   --assignee "$TF_VAR_service_principal_client_id" \
   --role "Network Contributor" \
-  --scope /subscriptions/$SUBSCRIPTION_ID
+  --scope "$TF_VAR_vnet_id"
 ```
-
-> **Tip:** For tighter scoping, you can narrow these role assignments to a specific resource group or VNet after Terraform creates them. For BYO VNet deployments, scope to the VNet's existing resource group instead.
 
 ### 4. Choose a deployment scenario
 
@@ -226,6 +223,10 @@ terraform apply -var-file=public-cluster.tfvars
 ```
 
 Replace `public-cluster.tfvars` with whichever file you chose in step 4.
+
+For **greenfield** deployments, Terraform automatically creates VNet-scoped Network Contributor role assignments for both the cluster service principal and the ARO RP, then waits 60 seconds for Azure AD propagation before creating the cluster.
+
+For **BYO VNet** deployments, you must assign Network Contributor on the VNet to both service principals before running apply (see [Setting BYO VNet variables from the CLI](#setting-byo-vnet-variables-from-the-cli)).
 
 #### Optional: remote state backend
 

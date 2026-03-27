@@ -15,11 +15,29 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.89"
     }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 2.0"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9"
+    }
   }
 }
 
 provider "azurerm" {
   features {}
+}
+
+# =============================================================================
+# Data Sources
+# =============================================================================
+
+data "azurerm_subscription" "current" {}
+
+data "azuread_service_principal" "aro_rp" {
+  client_id = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 }
 
 # =============================================================================
@@ -83,6 +101,46 @@ resource "azurerm_subnet" "worker" {
 }
 
 # =============================================================================
+# VNet Role Assignments (greenfield only)
+# =============================================================================
+# ARO validates that both the cluster SP and the ARO RP have Network
+# Contributor on the VNet before creating the cluster. For greenfield
+# deployments Terraform creates these assignments automatically.
+
+resource "azurerm_role_assignment" "cluster_sp_network_contributor" {
+  count = local.create_vnet ? 1 : 0
+
+  scope                = local.vnet_id
+  role_definition_name = "Network Contributor"
+  principal_id         = data.azuread_service_principal.cluster_sp.object_id
+}
+
+resource "azurerm_role_assignment" "aro_rp_network_contributor" {
+  count = local.create_vnet ? 1 : 0
+
+  scope                            = local.vnet_id
+  role_definition_name             = "Network Contributor"
+  principal_id                     = data.azuread_service_principal.aro_rp.object_id
+  skip_service_principal_aad_check = true
+}
+
+data "azuread_service_principal" "cluster_sp" {
+  client_id = var.service_principal_client_id
+}
+
+# Wait for Azure AD role assignment propagation before creating the cluster
+resource "time_sleep" "wait_for_role_propagation" {
+  count = local.create_vnet ? 1 : 0
+
+  depends_on = [
+    azurerm_role_assignment.cluster_sp_network_contributor,
+    azurerm_role_assignment.aro_rp_network_contributor,
+  ]
+
+  create_duration = "60s"
+}
+
+# =============================================================================
 # UDR (User Defined Routing) Configuration
 # =============================================================================
 
@@ -137,6 +195,8 @@ resource "azurerm_redhat_openshift_cluster" "aro" {
   name                = var.cluster_name
   location            = azurerm_resource_group.aro.location
   resource_group_name = azurerm_resource_group.aro.name
+
+  depends_on = [time_sleep.wait_for_role_propagation]
 
   cluster_profile {
     domain      = var.cluster_domain != "" ? var.cluster_domain : var.cluster_name
