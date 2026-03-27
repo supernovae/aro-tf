@@ -4,12 +4,13 @@
 
 cluster_name        = "privateclusterudr"
 location            = "eastus"
-resource_group_name = "aro-private-udr-rg"
+# resource_group_name — set via env var: export TF_VAR_resource_group_name="..." (see README.md step 3)
 public_endpoint     = false
 enable_udr          = true
 worker_node_count   = 3
 
-# Service principal and pull secret — set via environment variables (see README.md step 3):
+# Required env vars — set before running terraform (see README.md step 3):
+#   export TF_VAR_resource_group_name="aro-private-udr-rg"
 #   export TF_VAR_service_principal_client_id=...
 #   export TF_VAR_service_principal_client_secret=...
 #   export TF_VAR_pull_secret="$(cat pull-secret.txt)"

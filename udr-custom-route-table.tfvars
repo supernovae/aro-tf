@@ -5,7 +5,7 @@
 
 cluster_name        = "customudrcluster"
 location            = "eastus"
-resource_group_name = "aro-custom-udr-rg"
+# resource_group_name — set via env var: export TF_VAR_resource_group_name="..." (see README.md step 3)
 public_endpoint     = true
 enable_udr          = true
 worker_node_count   = 3
@@ -16,7 +16,8 @@ master_subnet_id   = "/subscriptions/<subscription-id>/resourceGroups/<network-r
 worker_subnet_id   = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<worker-subnet>"
 udr_route_table_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>/providers/Microsoft.Network/routeTables/<rt-name>"
 
-# Service principal and pull secret — set via environment variables (see README.md step 3):
+# Required env vars — set before running terraform (see README.md step 3):
+#   export TF_VAR_resource_group_name="aro-custom-udr-rg"
 #   export TF_VAR_service_principal_client_id=...
 #   export TF_VAR_service_principal_client_secret=...
 #   export TF_VAR_pull_secret="$(cat pull-secret.txt)"

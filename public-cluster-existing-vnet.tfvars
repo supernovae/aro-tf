@@ -4,7 +4,7 @@
 
 cluster_name        = "existingvnetcluster"
 location            = "eastus"
-resource_group_name = "aro-existing-vnet-rg"
+# resource_group_name — set via env var: export TF_VAR_resource_group_name="..." (see README.md step 3)
 public_endpoint     = true
 enable_udr          = false
 worker_node_count   = 3
@@ -14,7 +14,8 @@ vnet_id          = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>
 master_subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<master-subnet>"
 worker_subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<worker-subnet>"
 
-# Service principal and pull secret — set via environment variables (see README.md step 3):
+# Required env vars — set before running terraform (see README.md step 3):
+#   export TF_VAR_resource_group_name="aro-existing-vnet-rg"
 #   export TF_VAR_service_principal_client_id=...
 #   export TF_VAR_service_principal_client_secret=...
 #   export TF_VAR_pull_secret="$(cat pull-secret.txt)"

@@ -104,24 +104,27 @@ For GitHub Actions with OIDC federated credentials, see [Configuring OpenID Conn
 
 ARO requires a dedicated service principal that the cluster uses to manage Azure resources. This is separate from the Terraform authentication credentials.
 
-First, capture your subscription and resource group details into variables so every subsequent command can reference them:
+First, capture your subscription and resource group details into variables. Exporting `TF_VAR_resource_group_name` means Terraform will use the same value automatically — no need to duplicate it in your tfvars file:
 
 ```bash
 # Use the currently active subscription (or replace with a specific ID)
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-RESOURCE_GROUP="aro-public-rg"   # must match resource_group_name in your tfvars
+
+# Set the resource group name — Terraform picks this up via the TF_VAR_ prefix
+export TF_VAR_resource_group_name="aro-public-rg"
 ```
 
 Create the resource group if it does not already exist (Terraform will also create it, but the role assignments below need a scope):
 
 ```bash
-az group create --name "$RESOURCE_GROUP" --location eastus
+az group create --name "$TF_VAR_resource_group_name" --location eastus
+RG_ID=$(az group show --name "$TF_VAR_resource_group_name" --query id -o tsv)
 ```
 
-If the resource group already exists (e.g. BYO VNet scenarios), retrieve its resource ID:
+If the resource group already exists (e.g. BYO VNet scenarios), just retrieve its resource ID:
 
 ```bash
-RG_ID=$(az group show --name "$RESOURCE_GROUP" --query id -o tsv)
+RG_ID=$(az group show --name "$TF_VAR_resource_group_name" --query id -o tsv)
 ```
 
 Create the cluster service principal and capture its credentials:
@@ -208,11 +211,12 @@ terraform output console_url
 terraform output api_server_url
 
 # Retrieve admin credentials (not managed by Terraform — use the Azure CLI)
-az aro list-credentials --name <CLUSTER_NAME> --resource-group <RESOURCE_GROUP>
+CLUSTER_NAME=$(terraform output -raw cluster_name)
+az aro list-credentials --name "$CLUSTER_NAME" --resource-group "$TF_VAR_resource_group_name"
 
 # Log in with the oc CLI
 API_URL=$(terraform output -raw api_server_url)
-CREDS=$(az aro list-credentials --name <CLUSTER_NAME> --resource-group <RESOURCE_GROUP>)
+CREDS=$(az aro list-credentials --name "$CLUSTER_NAME" --resource-group "$TF_VAR_resource_group_name")
 oc login "$API_URL" \
   -u "$(echo $CREDS | jq -r .kubeadminUsername)" \
   -p "$(echo $CREDS | jq -r .kubeadminPassword)"
