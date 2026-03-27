@@ -100,41 +100,59 @@ For GitHub Actions with OIDC federated credentials, see [Configuring OpenID Conn
 
 > **Note:** ARO creation requires Contributor (or equivalent) on the subscription or resource group and the ability to assign the `Microsoft.RedHatOpenShift` resource provider. Consult the [official ARO prerequisites](https://learn.microsoft.com/azure/openshift/tutorial-create-cluster#verify-your-permissions) for the current minimum RBAC requirements.
 
-### 3. Create an ARO service principal
+### 3. Create an ARO service principal and assign roles
 
 ARO requires a dedicated service principal that the cluster uses to manage Azure resources. This is separate from the Terraform authentication credentials.
 
-```bash
-# Create the service principal
-az ad sp create-for-rbac --name "aro-cluster-sp" --skip-assignment
+First, capture your subscription and resource group details into variables so every subsequent command can reference them:
 
-# Note the appId and password from the output, then export:
-export TF_VAR_service_principal_client_id="<appId>"
-export TF_VAR_service_principal_client_secret="<password>"
+```bash
+# Use the currently active subscription (or replace with a specific ID)
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+RESOURCE_GROUP="aro-public-rg"   # must match resource_group_name in your tfvars
 ```
 
-The ARO RP service principal (with well-known ID `f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875`) also needs Network Contributor on the VNet. For greenfield deployments, grant this after the first `terraform apply` creates the VNet, or grant it at the resource group scope upfront:
+Create the resource group if it does not already exist (Terraform will also create it, but the role assignments below need a scope):
+
+```bash
+az group create --name "$RESOURCE_GROUP" --location eastus
+```
+
+If the resource group already exists (e.g. BYO VNet scenarios), retrieve its resource ID:
+
+```bash
+RG_ID=$(az group show --name "$RESOURCE_GROUP" --query id -o tsv)
+```
+
+Create the cluster service principal and capture its credentials:
+
+```bash
+SP_JSON=$(az ad sp create-for-rbac --name "aro-cluster-sp" --skip-assignment -o json)
+export TF_VAR_service_principal_client_id=$(echo "$SP_JSON" | jq -r .appId)
+export TF_VAR_service_principal_client_secret=$(echo "$SP_JSON" | jq -r .password)
+```
+
+The ARO resource provider service principal (well-known ID `f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875`) and your cluster service principal both need Network Contributor so they can manage the VNet and subnets:
 
 ```bash
 # Get the ARO RP service principal object ID
 ARO_RP_OBJ_ID=$(az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
 
-# Grant Network Contributor on the resource group (adjust scope as needed)
+# Grant Network Contributor to the ARO RP on the resource group
 az role assignment create \
   --assignee-object-id "$ARO_RP_OBJ_ID" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
-  --scope /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>
-```
+  --scope "$RG_ID"
 
-Also grant the cluster service principal Network Contributor on the VNet:
-
-```bash
+# Grant Network Contributor to the cluster SP on the resource group
 az role assignment create \
   --assignee "$TF_VAR_service_principal_client_id" \
   --role "Network Contributor" \
-  --scope /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>
+  --scope "$RG_ID"
 ```
+
+> **Tip:** For BYO VNet deployments where the VNet lives in a different resource group, scope the role assignments to that VNet's resource group instead.
 
 ### 4. Choose a deployment scenario
 
