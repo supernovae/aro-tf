@@ -4,17 +4,20 @@
 cluster_name = "publiccluster"
 location     = "eastus"
 # resource_group_name — set via env var: export TF_VAR_resource_group_name="..." (see README.md step 3)
-public_endpoint   = true
-enable_udr        = false
-worker_node_count = 3
+public_endpoint         = true
+enable_udr              = false
+manage_role_assignments = false
+worker_node_count       = 3
 
 # Required env vars — set before running terraform (see README.md step 3):
 #   export TF_VAR_resource_group_name="aro-public-rg"
 #   export TF_VAR_service_principal_client_id=...
 #   export TF_VAR_service_principal_client_secret=...
+#   export TF_VAR_pull_secret="$(cat pull-secret.txt)"
+#
+# If you set manage_role_assignments = true, also export:
 #   export TF_VAR_service_principal_object_id=$(az ad sp show --id $TF_VAR_service_principal_client_id --query id -o tsv)
 #   export TF_VAR_aro_rp_sp_object_id=$(az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
-#   export TF_VAR_pull_secret="$(cat pull-secret.txt)"
 
 # OpenShift version in X.Y.Z format (list with: az aro get-versions -l eastus -o table)
 aro_version = "4.20.15"
