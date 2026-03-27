@@ -2,12 +2,12 @@
 # API server and ingress are private. Terraform creates VNet, subnets, and route table.
 # Usage: terraform apply -var-file=private-cluster-udr.tfvars
 
-cluster_name        = "privateclusterudr"
-location            = "eastus"
+cluster_name = "privateclusterudr"
+location     = "eastus"
 # resource_group_name — set via env var: export TF_VAR_resource_group_name="..." (see README.md step 3)
-public_endpoint     = false
-enable_udr          = true
-worker_node_count   = 3
+public_endpoint   = false
+enable_udr        = true
+worker_node_count = 3
 
 # Required env vars — set before running terraform (see README.md step 3):
 #   export TF_VAR_resource_group_name="aro-private-udr-rg"
@@ -18,9 +18,11 @@ worker_node_count   = 3
 # OpenShift version in X.Y.Z format (list with: az aro get-versions -l eastus -o table)
 aro_version = "4.20.15"
 
-# VM sizes
-# master_vm_size      = "Standard_D8s_v3"
-# worker_vm_size      = "Standard_D4s_v3"
+# VM sizes — defaults are Dsv5. For OpenShift 4.19+, Dsv6 is recommended if quota is available.
+# master_vm_size      = "Standard_D8s_v5"
+# worker_vm_size      = "Standard_D4s_v5"
+# master_vm_size      = "Standard_D8s_v6"   # preferred with 4.19+
+# worker_vm_size      = "Standard_D4s_v6"   # preferred with 4.19+
 
 # VNet address space
 # vnet_address_space           = "10.0.0.0/22"

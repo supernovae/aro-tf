@@ -4,10 +4,10 @@
 # Subnets should have service endpoints for Microsoft.Storage and Microsoft.ContainerRegistry.
 # Usage: terraform apply -var-file=private-cluster-existing-vnet-udr.tfvars
 
-cluster_name    = "privatebyo"
-location        = "eastus"
-public_endpoint = false
-enable_udr      = true
+cluster_name      = "privatebyo"
+location          = "eastus"
+public_endpoint   = false
+enable_udr        = true
 worker_node_count = 3
 
 # BYO VNet — set these via TF_VAR_ env vars so they match your infrastructure:
@@ -43,9 +43,11 @@ worker_subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>
 # OpenShift version in X.Y.Z format (list with: az aro get-versions -l eastus -o table)
 aro_version = "4.20.15"
 
-# VM sizes
-# master_vm_size      = "Standard_D8s_v3"
-# worker_vm_size      = "Standard_D4s_v3"
+# VM sizes — defaults are Dsv5. For OpenShift 4.19+, Dsv6 is recommended if quota is available.
+# master_vm_size      = "Standard_D8s_v5"
+# worker_vm_size      = "Standard_D4s_v5"
+# master_vm_size      = "Standard_D8s_v6"   # preferred with 4.19+
+# worker_vm_size      = "Standard_D4s_v6"   # preferred with 4.19+
 # worker_disk_size_gb = 128
 
 # Tags

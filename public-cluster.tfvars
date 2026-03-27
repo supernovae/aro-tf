@@ -1,12 +1,12 @@
 # Greenfield public ARO cluster — Terraform creates VNet and subnets.
 # Usage: terraform apply -var-file=public-cluster.tfvars
 
-cluster_name        = "publiccluster"
-location            = "eastus"
+cluster_name = "publiccluster"
+location     = "eastus"
 # resource_group_name — set via env var: export TF_VAR_resource_group_name="..." (see README.md step 3)
-public_endpoint     = true
-enable_udr          = false
-worker_node_count   = 3
+public_endpoint   = true
+enable_udr        = false
+worker_node_count = 3
 
 # Required env vars — set before running terraform (see README.md step 3):
 #   export TF_VAR_resource_group_name="aro-public-rg"
@@ -17,9 +17,11 @@ worker_node_count   = 3
 # OpenShift version in X.Y.Z format (list with: az aro get-versions -l eastus -o table)
 aro_version = "4.20.15"
 
-# VM sizes (defaults shown)
-# master_vm_size      = "Standard_D8s_v3"
-# worker_vm_size      = "Standard_D4s_v3"
+# VM sizes — defaults are Dsv5. For OpenShift 4.19+, Dsv6 is recommended if quota is available.
+# master_vm_size      = "Standard_D8s_v5"
+# worker_vm_size      = "Standard_D4s_v5"
+# master_vm_size      = "Standard_D8s_v6"   # preferred with 4.19+
+# worker_vm_size      = "Standard_D4s_v6"   # preferred with 4.19+
 # worker_disk_size_gb = 128
 
 # VNet address space (greenfield only)

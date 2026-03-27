@@ -145,15 +145,15 @@ variable "udr_route_table_id" {
 # =============================================================================
 
 variable "master_vm_size" {
-  description = "VM size for master (control plane) nodes"
+  description = "VM size for master (control plane) nodes. Dsv5 recommended; Dsv6 supported on OpenShift 4.19+."
   type        = string
-  default     = "Standard_D8s_v3"
+  default     = "Standard_D8s_v5"
 }
 
 variable "worker_vm_size" {
-  description = "VM size for worker nodes"
+  description = "VM size for worker nodes. Dsv5 recommended; Dsv6 supported on OpenShift 4.19+."
   type        = string
-  default     = "Standard_D4s_v3"
+  default     = "Standard_D4s_v5"
 }
 
 variable "worker_disk_size_gb" {

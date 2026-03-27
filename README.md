@@ -283,8 +283,8 @@ terraform destroy -var-file=public-cluster.tfvars
 | `worker_subnet_id` | Existing worker subnet ID (BYO) | `null` |
 | `udr_route_table_id` | Existing route table ID (custom UDR) | `null` |
 | `worker_node_count` | Number of worker nodes | `3` |
-| `master_vm_size` | Master node VM SKU | `Standard_D8s_v3` |
-| `worker_vm_size` | Worker node VM SKU | `Standard_D4s_v3` |
+| `master_vm_size` | Master node VM SKU | `Standard_D8s_v5` |
+| `worker_vm_size` | Worker node VM SKU | `Standard_D4s_v5` |
 
 See [`variables.tf`](variables.tf) for the full list with descriptions and defaults.
 
