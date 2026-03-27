@@ -1,0 +1,30 @@
+# Tool-specific local config
+.claude/
+
+# Terraform state and plans
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# Terraform working directory
+.terraform/
+
+# Secrets — NEVER commit these
+pull-secret.txt
+secrets.auto.tfvars
+*.pem
+*.key
+credentials.json
+service-account.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log

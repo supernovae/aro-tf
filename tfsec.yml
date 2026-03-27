@@ -1,0 +1,8 @@
+version: "1.0"
+
+output:
+  format: json
+
+exclude:
+  - AZU0009  # AKS monitoring — not applicable to ARO
+  - KUB013   # Container Log Analytics — not applicable to ARO

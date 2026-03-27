@@ -1,0 +1,197 @@
+# =============================================================================
+# ARO Cluster Variables
+# =============================================================================
+
+# =============================================================================
+# Cluster Configuration
+# =============================================================================
+
+variable "cluster_name" {
+  description = "The name of the ARO cluster"
+  type        = string
+}
+
+variable "cluster_domain" {
+  description = "Custom cluster domain. Defaults to cluster_name if empty."
+  type        = string
+  default     = ""
+}
+
+variable "aro_version" {
+  description = "The OpenShift version to deploy. Run `az aro get-versions -l <region>` to list supported versions."
+  type        = string
+  default     = "4.15"
+}
+
+variable "pull_secret" {
+  description = "The Red Hat pull secret for the OpenShift cluster (JSON string)"
+  type        = string
+  sensitive   = true
+}
+
+# =============================================================================
+# Service Principal
+# =============================================================================
+
+variable "service_principal_client_id" {
+  description = "Client ID of the service principal used by the ARO cluster"
+  type        = string
+}
+
+variable "service_principal_client_secret" {
+  description = "Client secret of the service principal used by the ARO cluster"
+  type        = string
+  sensitive   = true
+}
+
+# =============================================================================
+# Location and Resource Group
+# =============================================================================
+
+variable "location" {
+  description = "The Azure region for the cluster resources"
+  type        = string
+  default     = "eastus"
+}
+
+variable "resource_group_name" {
+  description = "The name of the resource group to create for cluster resources"
+  type        = string
+
+  validation {
+    condition     = length(var.resource_group_name) > 0
+    error_message = "resource_group_name is required."
+  }
+}
+
+# =============================================================================
+# Network Configuration
+# =============================================================================
+
+variable "vnet_name" {
+  description = "Custom name for the Terraform-managed VNet. Ignored when using BYO VNet (vnet_id is set). Defaults to '<cluster_name>-vnet'."
+  type        = string
+  default     = ""
+}
+
+variable "vnet_id" {
+  description = "The resource ID of an existing VNet (BYO VNet mode). Leave null to let Terraform create one."
+  type        = string
+  default     = null
+}
+
+variable "vnet_address_space" {
+  description = "The address space for the Terraform-managed VNet (ignored when using BYO VNet)"
+  type        = string
+  default     = "10.0.0.0/22"
+}
+
+variable "master_subnet_address_prefix" {
+  description = "The address prefix for the master subnet (used only when Terraform creates the VNet)"
+  type        = string
+  default     = "10.0.0.0/23"
+}
+
+variable "worker_subnet_address_prefix" {
+  description = "The address prefix for the worker subnet (used only when Terraform creates the VNet)"
+  type        = string
+  default     = "10.0.2.0/23"
+}
+
+variable "master_subnet_id" {
+  description = "The resource ID of an existing master subnet (required when vnet_id is set)"
+  type        = string
+  default     = null
+}
+
+variable "worker_subnet_id" {
+  description = "The resource ID of an existing worker subnet (required when vnet_id is set)"
+  type        = string
+  default     = null
+}
+
+# =============================================================================
+# Endpoint Configuration (Public/Private)
+# =============================================================================
+
+variable "public_endpoint" {
+  description = "Enable public endpoints for API server and ingress"
+  type        = bool
+  default     = true
+}
+
+# =============================================================================
+# UDR (User Defined Routing) Configuration
+# =============================================================================
+
+variable "enable_udr" {
+  description = "Enable User Defined Routing for the cluster"
+  type        = bool
+  default     = false
+}
+
+variable "udr_route_table_id" {
+  description = "The resource ID of an existing route table to associate with master/worker subnets. When null and enable_udr is true, Terraform creates one."
+  type        = string
+  default     = null
+}
+
+# =============================================================================
+# VM Sizes and Disk Configuration
+# =============================================================================
+
+variable "master_vm_size" {
+  description = "VM size for master (control plane) nodes"
+  type        = string
+  default     = "Standard_D8s_v3"
+}
+
+variable "worker_vm_size" {
+  description = "VM size for worker nodes"
+  type        = string
+  default     = "Standard_D4s_v3"
+}
+
+variable "worker_disk_size_gb" {
+  description = "Disk size for worker nodes in GB"
+  type        = number
+  default     = 128
+}
+
+variable "worker_node_count" {
+  description = "Number of worker nodes"
+  type        = number
+  default     = 3
+}
+
+# =============================================================================
+# Network Profiles
+# =============================================================================
+
+variable "pod_cidr" {
+  description = "The CIDR for pod IPs"
+  type        = string
+  default     = "10.128.0.0/14"
+}
+
+variable "service_cidr" {
+  description = "The CIDR for service IPs"
+  type        = string
+  default     = "172.30.0.0/16"
+}
+
+# =============================================================================
+# Tags
+# =============================================================================
+
+variable "tags" {
+  description = "Additional tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+  default     = "dev"
+}

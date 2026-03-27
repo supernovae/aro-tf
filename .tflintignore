@@ -1,0 +1,12 @@
+# TFLint ignore file
+# https://github.com/terraform-linters/tflint
+
+# Ignore specific files or patterns
+# files:
+#   - "vendor/**"
+#   - ".terraform/**"
+
+# Ignore specific rules in specific files
+# rule "terraform_deprecated_interpolation" {
+#   path = "legacy.tf"
+# }
