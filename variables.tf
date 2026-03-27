@@ -33,6 +33,12 @@ variable "pull_secret" {
   sensitive   = true
 }
 
+variable "fips_enabled" {
+  description = "Enable FIPS validated cryptographic modules. Changing this forces a new cluster. Requires OpenShift 4.10+."
+  type        = bool
+  default     = false
+}
+
 # =============================================================================
 # Service Principal
 # =============================================================================

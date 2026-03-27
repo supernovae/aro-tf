@@ -328,6 +328,7 @@ terraform destroy -var-file=public-cluster.tfvars
 | `aro_rp_sp_object_id` | ARO RP SP object ID (Option A only) | `null` |
 | `manage_role_assignments` | Let Terraform create VNet role assignments (requires Owner/UAA) | `true` |
 | `aro_version` | OpenShift version in X.Y.Z format (`az aro get-versions`) | *required* |
+| `fips_enabled` | Enable FIPS 140-2 validated crypto modules (forces new cluster) | `false` |
 | `public_endpoint` | Public API server and ingress | `true` |
 | `enable_udr` | Enable User Defined Routing | `false` |
 | `vnet_id` | Existing VNet ID (BYO mode) | `null` |

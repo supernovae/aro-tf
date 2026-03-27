@@ -188,9 +188,10 @@ resource "azurerm_redhat_openshift_cluster" "aro" {
   depends_on = [time_sleep.wait_for_role_propagation]
 
   cluster_profile {
-    domain      = var.cluster_domain != "" ? var.cluster_domain : var.cluster_name
-    pull_secret = var.pull_secret
-    version     = var.aro_version
+    domain       = var.cluster_domain != "" ? var.cluster_domain : var.cluster_name
+    pull_secret  = var.pull_secret
+    version      = var.aro_version
+    fips_enabled = var.fips_enabled
   }
 
   network_profile {

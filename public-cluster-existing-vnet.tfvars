@@ -25,6 +25,9 @@ worker_subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>
 # OpenShift version in X.Y.Z format (list with: az aro get-versions -l eastus -o table)
 aro_version = "4.20.15"
 
+# FIPS mode — enable FIPS 140-2 validated cryptographic modules (requires 4.10+, forces new cluster)
+# fips_enabled = true
+
 # VM sizes — defaults are Dsv5. For OpenShift 4.19+, Dsv6 is recommended if quota is available.
 # master_vm_size      = "Standard_D8s_v5"
 # worker_vm_size      = "Standard_D4s_v5"
