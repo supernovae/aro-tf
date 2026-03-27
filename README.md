@@ -119,35 +119,76 @@ export TF_VAR_resource_group_name="aro-public-rg"
 > terraform import azurerm_resource_group.aro /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$TF_VAR_resource_group_name
 > ```
 
-Create the cluster service principal and capture its credentials and object ID:
+Create the cluster service principal and capture its credentials:
 
 ```bash
 SP_JSON=$(az ad sp create-for-rbac --name "aro-cluster-sp" --skip-assignment -o json)
 export TF_VAR_service_principal_client_id=$(echo "$SP_JSON" | jq -r .appId)
 export TF_VAR_service_principal_client_secret=$(echo "$SP_JSON" | jq -r .password)
+```
 
-# Object ID of the cluster SP (needed for VNet role assignments)
+#### Role assignments — choose Option A or Option B
+
+ARO requires both the cluster SP and the ARO resource provider SP to have **Network Contributor** on the VNet. How you set this up depends on whether the identity running Terraform has **Owner** or **User Access Administrator** permission.
+
+**Option A — Let Terraform manage roles (default, requires Owner or User Access Administrator)**
+
+Export the SP object IDs so Terraform can create the role assignments automatically:
+
+```bash
 export TF_VAR_service_principal_object_id=$(az ad sp show \
   --id "$TF_VAR_service_principal_client_id" --query id -o tsv)
-
-# Object ID of the ARO resource provider SP (well-known client ID)
 export TF_VAR_aro_rp_sp_object_id=$(az ad sp show \
   --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
 ```
 
-For **greenfield** deployments, that's it — Terraform automatically creates VNet-scoped Network Contributor role assignments for both service principals and waits 60 seconds for Azure AD propagation before creating the cluster.
+For **greenfield** (Terraform-created VNet), that's it. Terraform creates the assignments and waits for propagation automatically.
 
-For **BYO VNet** deployments, you must manually grant Network Contributor on the VNet to both service principals before running apply:
+For **BYO VNet**, you still need to assign roles manually (see Option B below) — Terraform only manages role assignments on VNets it creates.
+
+**Option B — Manage roles manually (Contributor-only Terraform identity)**
+
+If your Terraform identity only has Contributor, set `manage_role_assignments = false` in your tfvars and create the role assignments via CLI before running apply:
+
+```bash
+# Get SP object IDs
+SP_OBJ_ID=$(az ad sp show --id "$TF_VAR_service_principal_client_id" --query id -o tsv)
+ARO_RP_OBJ_ID=$(az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
+```
+
+For **greenfield**, the VNet doesn't exist yet — run `terraform apply` first (it will create the VNet and skip role assignments), then assign roles on the new VNet and re-run apply:
+
+```bash
+VNET_ID=$(terraform output -raw vnet_id)
+
+az role assignment create \
+  --assignee-object-id "$ARO_RP_OBJ_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --role "Network Contributor" \
+  --scope "$VNET_ID"
+
+az role assignment create \
+  --assignee-object-id "$SP_OBJ_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --role "Network Contributor" \
+  --scope "$VNET_ID"
+
+# Wait ~60s for propagation, then re-apply to create the cluster
+sleep 60
+terraform apply -var-file=<your-scenario>.tfvars
+```
+
+For **BYO VNet**, assign roles on the existing VNet before the first apply:
 
 ```bash
 az role assignment create \
-  --assignee-object-id "$TF_VAR_aro_rp_sp_object_id" \
+  --assignee-object-id "$ARO_RP_OBJ_ID" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
   --scope "$TF_VAR_vnet_id"
 
 az role assignment create \
-  --assignee-object-id "$TF_VAR_service_principal_object_id" \
+  --assignee-object-id "$SP_OBJ_ID" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
   --scope "$TF_VAR_vnet_id"
@@ -283,8 +324,9 @@ terraform destroy -var-file=public-cluster.tfvars
 | `pull_secret` | Red Hat pull secret (JSON) | *required* |
 | `service_principal_client_id` | Cluster SP client ID (appId) | *required* |
 | `service_principal_client_secret` | Cluster SP client secret (password) | *required* |
-| `service_principal_object_id` | Cluster SP object ID | *required* |
-| `aro_rp_sp_object_id` | ARO RP SP object ID | *required* |
+| `service_principal_object_id` | Cluster SP object ID (Option A only) | `null` |
+| `aro_rp_sp_object_id` | ARO RP SP object ID (Option A only) | `null` |
+| `manage_role_assignments` | Let Terraform create VNet role assignments (requires Owner/UAA) | `true` |
 | `aro_version` | OpenShift version in X.Y.Z format (`az aro get-versions`) | *required* |
 | `public_endpoint` | Public API server and ingress | `true` |
 | `enable_udr` | Enable User Defined Routing | `false` |

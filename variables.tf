@@ -51,11 +51,19 @@ variable "service_principal_client_secret" {
 variable "service_principal_object_id" {
   description = "Object ID of the cluster service principal. Get with: az ad sp show --id <appId> --query id -o tsv"
   type        = string
+  default     = null
 }
 
 variable "aro_rp_sp_object_id" {
   description = "Object ID of the ARO resource provider service principal. Get with: az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv"
   type        = string
+  default     = null
+}
+
+variable "manage_role_assignments" {
+  description = "Let Terraform create VNet-scoped Network Contributor role assignments for the cluster SP and the ARO RP. Requires Owner or User Access Administrator. Set to false to manage role assignments manually via az CLI."
+  type        = bool
+  default     = true
 }
 
 # =============================================================================

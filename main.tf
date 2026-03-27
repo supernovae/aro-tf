@@ -87,14 +87,21 @@ resource "azurerm_subnet" "worker" {
 }
 
 # =============================================================================
-# VNet Role Assignments (greenfield only)
+# VNet Role Assignments (greenfield + manage_role_assignments = true)
 # =============================================================================
 # ARO validates that both the cluster SP and the ARO RP have Network
-# Contributor on the VNet before creating the cluster. For greenfield
-# deployments Terraform creates these assignments automatically.
+# Contributor on the VNet before creating the cluster. When
+# manage_role_assignments = true (default), Terraform handles this.
+# Set manage_role_assignments = false if your Terraform identity lacks
+# Owner / User Access Administrator — then assign the roles manually
+# via az CLI before running apply (see README.md step 3).
+
+locals {
+  manage_roles = var.manage_role_assignments && local.create_vnet
+}
 
 resource "azurerm_role_assignment" "cluster_sp_network_contributor" {
-  count = local.create_vnet ? 1 : 0
+  count = local.manage_roles ? 1 : 0
 
   scope                            = local.vnet_id
   role_definition_name             = "Network Contributor"
@@ -103,7 +110,7 @@ resource "azurerm_role_assignment" "cluster_sp_network_contributor" {
 }
 
 resource "azurerm_role_assignment" "aro_rp_network_contributor" {
-  count = local.create_vnet ? 1 : 0
+  count = local.manage_roles ? 1 : 0
 
   scope                            = local.vnet_id
   role_definition_name             = "Network Contributor"
@@ -111,9 +118,8 @@ resource "azurerm_role_assignment" "aro_rp_network_contributor" {
   skip_service_principal_aad_check = true
 }
 
-# Wait for Azure AD role assignment propagation before creating the cluster
 resource "time_sleep" "wait_for_role_propagation" {
-  count = local.create_vnet ? 1 : 0
+  count = local.manage_roles ? 1 : 0
 
   depends_on = [
     azurerm_role_assignment.cluster_sp_network_contributor,
