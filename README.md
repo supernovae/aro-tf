@@ -104,7 +104,7 @@ For GitHub Actions with OIDC federated credentials, see [Configuring OpenID Conn
 
 ARO requires a dedicated service principal that the cluster uses to manage Azure resources. This is separate from the Terraform authentication credentials.
 
-First, capture your subscription and resource group details into variables. Exporting `TF_VAR_resource_group_name` means Terraform will use the same value automatically — no need to duplicate it in your tfvars file:
+First, capture your subscription details and set the resource group name. Exporting `TF_VAR_resource_group_name` means Terraform will use the same value automatically — no need to duplicate it in your tfvars file:
 
 ```bash
 # Use the currently active subscription (or replace with a specific ID)
@@ -114,18 +114,10 @@ SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 export TF_VAR_resource_group_name="aro-public-rg"
 ```
 
-Create the resource group if it does not already exist (Terraform will also create it, but the role assignments below need a scope):
-
-```bash
-az group create --name "$TF_VAR_resource_group_name" --location eastus
-RG_ID=$(az group show --name "$TF_VAR_resource_group_name" --query id -o tsv)
-```
-
-If the resource group already exists (e.g. BYO VNet scenarios), just retrieve its resource ID:
-
-```bash
-RG_ID=$(az group show --name "$TF_VAR_resource_group_name" --query id -o tsv)
-```
+> **Important:** Do **not** create the resource group manually with `az group create` — Terraform manages it. If you already created it outside of Terraform, import it before running apply:
+> ```bash
+> terraform import azurerm_resource_group.aro /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$TF_VAR_resource_group_name
+> ```
 
 Create the cluster service principal and capture its credentials:
 
@@ -135,27 +127,27 @@ export TF_VAR_service_principal_client_id=$(echo "$SP_JSON" | jq -r .appId)
 export TF_VAR_service_principal_client_secret=$(echo "$SP_JSON" | jq -r .password)
 ```
 
-The ARO resource provider service principal (well-known ID `f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875`) and your cluster service principal both need Network Contributor so they can manage the VNet and subnets:
+The ARO resource provider service principal (well-known ID `f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875`) and your cluster service principal both need Network Contributor so they can manage the VNet and subnets. Use subscription scope so the roles are in place before Terraform creates the resource group:
 
 ```bash
 # Get the ARO RP service principal object ID
 ARO_RP_OBJ_ID=$(az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
 
-# Grant Network Contributor to the ARO RP on the resource group
+# Grant Network Contributor to the ARO RP at subscription scope
 az role assignment create \
   --assignee-object-id "$ARO_RP_OBJ_ID" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
-  --scope "$RG_ID"
+  --scope /subscriptions/$SUBSCRIPTION_ID
 
-# Grant Network Contributor to the cluster SP on the resource group
+# Grant Network Contributor to the cluster SP at subscription scope
 az role assignment create \
   --assignee "$TF_VAR_service_principal_client_id" \
   --role "Network Contributor" \
-  --scope "$RG_ID"
+  --scope /subscriptions/$SUBSCRIPTION_ID
 ```
 
-> **Tip:** For BYO VNet deployments where the VNet lives in a different resource group, scope the role assignments to that VNet's resource group instead.
+> **Tip:** For tighter scoping, you can narrow these role assignments to a specific resource group or VNet after Terraform creates them. For BYO VNet deployments, scope to the VNet's existing resource group instead.
 
 ### 4. Choose a deployment scenario
 
