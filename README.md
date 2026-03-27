@@ -161,6 +161,7 @@ Pick the tfvars file that matches your use case and copy it as a starting point:
 | Private cluster + UDR | New | Yes (managed) | [`private-cluster-udr.tfvars`](private-cluster-udr.tfvars) |
 | Public cluster on existing VNet | BYO | No | [`public-cluster-existing-vnet.tfvars`](public-cluster-existing-vnet.tfvars) |
 | UDR cluster on existing VNet | BYO | Yes (managed) | [`udr-cluster-existing-vnet.tfvars`](udr-cluster-existing-vnet.tfvars) |
+| Private cluster + UDR on existing VNet | BYO | Yes (managed) | [`private-cluster-existing-vnet-udr.tfvars`](private-cluster-existing-vnet-udr.tfvars) |
 | UDR with custom route table | BYO | Yes (supplied) | [`udr-custom-route-table.tfvars`](udr-custom-route-table.tfvars) |
 
 #### BYO VNet prerequisites
@@ -171,6 +172,45 @@ When bringing your own VNet, ensure the master and worker subnets:
 - Are sized at least /23 (master) and /23 (worker).
 - Do not overlap with `pod_cidr` (default `10.128.0.0/14`) or `service_cidr` (default `172.30.0.0/16`).
 - Reside in a region that supports ARO — check with `az aro get-versions -l <region>`.
+
+#### Setting BYO VNet variables from the CLI
+
+Rather than copying long resource IDs by hand, use the Azure CLI to look them up and export as `TF_VAR_` environment variables:
+
+```bash
+NETWORK_RG="my-network-rg"     # resource group that contains your VNet
+VNET_NAME="my-vnet"            # name of your existing VNet
+MASTER_SUBNET="master"         # name of the master subnet
+WORKER_SUBNET="worker"         # name of the worker subnet
+
+export TF_VAR_vnet_id=$(az network vnet show \
+  --resource-group "$NETWORK_RG" --name "$VNET_NAME" --query id -o tsv)
+
+export TF_VAR_master_subnet_id=$(az network vnet subnet show \
+  --resource-group "$NETWORK_RG" --vnet-name "$VNET_NAME" \
+  --name "$MASTER_SUBNET" --query id -o tsv)
+
+export TF_VAR_worker_subnet_id=$(az network vnet subnet show \
+  --resource-group "$NETWORK_RG" --vnet-name "$VNET_NAME" \
+  --name "$WORKER_SUBNET" --query id -o tsv)
+```
+
+If you are also supplying your own route table:
+
+```bash
+UDR_NAME="my-udr"
+
+export TF_VAR_udr_route_table_id=$(az network route-table show \
+  --resource-group "$NETWORK_RG" --name "$UDR_NAME" --query id -o tsv)
+```
+
+Verify the values are set:
+
+```bash
+echo "VNet:          $TF_VAR_vnet_id"
+echo "Master subnet: $TF_VAR_master_subnet_id"
+echo "Worker subnet: $TF_VAR_worker_subnet_id"
+```
 
 ### 5. Initialize, plan, and apply
 
@@ -277,8 +317,9 @@ See [`variables.tf`](variables.tf) for the full list with descriptions and defau
 ├── private-cluster.tfvars               # Greenfield private cluster
 ├── public-cluster-udr.tfvars            # Greenfield public + UDR
 ├── private-cluster-udr.tfvars           # Greenfield private + UDR
-├── public-cluster-existing-vnet.tfvars  # BYO VNet public cluster
-├── udr-cluster-existing-vnet.tfvars     # BYO VNet + managed UDR
+├── public-cluster-existing-vnet.tfvars           # BYO VNet public cluster
+├── private-cluster-existing-vnet-udr.tfvars      # BYO VNet private + UDR
+├── udr-cluster-existing-vnet.tfvars              # BYO VNet + managed UDR
 ├── udr-custom-route-table.tfvars        # BYO VNet + supplied route table
 └── .github/workflows/terraform.yml      # CI: fmt, validate, tfsec
 ```
