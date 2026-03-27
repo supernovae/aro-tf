@@ -98,7 +98,41 @@ export ARM_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
 
 For GitHub Actions with OIDC federated credentials, see [Configuring OpenID Connect in Azure](https://docs.github.com/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure).
 
-> **Note:** ARO creation requires Contributor (or equivalent) on the subscription or resource group and the ability to assign the `Microsoft.RedHatOpenShift` resource provider. Consult the [official ARO prerequisites](https://learn.microsoft.com/azure/openshift/tutorial-create-cluster#verify-your-permissions) for the current minimum RBAC requirements.
+#### Required permissions for the Terraform identity
+
+The identity that runs Terraform (your `az login` session or the `ARM_*` service principal) needs specific Azure RBAC roles. The exact requirements depend on which role-assignment path you choose.
+
+| Permission | Purpose | Required when |
+|---|---|---|
+| **Contributor** | Create resource groups, VNets, subnets, route tables, and ARO clusters | Always |
+| **User Access Administrator** | Create role assignments (Network Contributor) on the VNet for the cluster SP and ARO RP | `manage_role_assignments = true` (Option A) |
+
+**If using Option A (Terraform manages role assignments)** — the Terraform identity needs **both** Contributor and User Access Administrator. To add User Access Administrator to an existing service principal:
+
+```bash
+# Get the Terraform SP's object ID
+TF_SP_OBJ_ID=$(az ad sp show --id "<ARM_CLIENT_ID>" --query id -o tsv)
+
+# Grant User Access Administrator scoped to the subscription
+az role assignment create \
+  --assignee-object-id "$TF_SP_OBJ_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --role "User Access Administrator" \
+  --scope "/subscriptions/<SUBSCRIPTION_ID>"
+```
+
+> **Tip:** For tighter scoping, replace the subscription scope with a resource group scope — but the resource group must already exist.
+
+**If using Option B (manual role assignments)** — Contributor alone is sufficient for the Terraform identity. You (or an admin) assign the VNet roles manually via `az CLI` using an identity that has Owner or User Access Administrator. See [Step 3 — Option B](#role-assignments--choose-option-a-or-option-b) for the commands.
+
+**Summary of all service principals involved:**
+
+| Identity | Role(s) | Scope | Managed by |
+|---|---|---|---|
+| Terraform SP (`ARM_CLIENT_ID`) | Contributor | Subscription or RG | You / your admin |
+| Terraform SP (`ARM_CLIENT_ID`) | User Access Administrator | Subscription or RG | You / your admin (Option A only) |
+| Cluster SP (`TF_VAR_service_principal_client_id`) | Network Contributor | VNet | Terraform (Option A) or az CLI (Option B) |
+| ARO RP SP (`f1dd0a37-...`) | Network Contributor | VNet | Terraform (Option A) or az CLI (Option B) |
 
 ### 3. Create an ARO service principal and assign roles
 
@@ -148,24 +182,26 @@ For **BYO VNet**, you still need to assign roles manually (see Option B below) �
 
 **Option B — Manage roles manually (Contributor-only Terraform identity)**
 
-If your Terraform identity only has Contributor, set `manage_role_assignments = false` in your tfvars and create the role assignments via CLI before running apply:
+If your Terraform identity only has Contributor (no User Access Administrator), set `manage_role_assignments = false` in your tfvars. You (or an admin with Owner/UAA) will assign the VNet roles via `az CLI`.
+
+First, get the SP object IDs:
 
 ```bash
-# Get SP object IDs
 SP_OBJ_ID=$(az ad sp show --id "$TF_VAR_service_principal_client_id" --query id -o tsv)
 ARO_RP_OBJ_ID=$(az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
 ```
 
-For **greenfield**, the VNet doesn't exist yet — run `terraform apply` first (it will create the VNet and skip role assignments), then assign roles on the new VNet and re-run apply:
+For **greenfield**, the VNet doesn't exist yet. Use `-target` to create only the networking resources first, then assign roles and re-apply:
 
 ```bash
-VNET_ID=$(terraform output -raw vnet_id)
+# Step 1 — create only the VNet and subnets
+terraform apply -var-file=<your-scenario>.tfvars \
+  -target=azurerm_virtual_network.aro[0] \
+  -target=azurerm_subnet.master[0] \
+  -target=azurerm_subnet.worker[0]
 
-az role assignment create \
-  --assignee-object-id "$ARO_RP_OBJ_ID" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Network Contributor" \
-  --scope "$VNET_ID"
+# Step 2 — assign Network Contributor on the new VNet
+VNET_ID=$(terraform output -raw vnet_id)
 
 az role assignment create \
   --assignee-object-id "$SP_OBJ_ID" \
@@ -173,7 +209,13 @@ az role assignment create \
   --role "Network Contributor" \
   --scope "$VNET_ID"
 
-# Wait ~60s for propagation, then re-apply to create the cluster
+az role assignment create \
+  --assignee-object-id "$ARO_RP_OBJ_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --role "Network Contributor" \
+  --scope "$VNET_ID"
+
+# Step 3 — wait for propagation, then full apply to create the cluster
 sleep 60
 terraform apply -var-file=<your-scenario>.tfvars
 ```
@@ -182,13 +224,13 @@ For **BYO VNet**, assign roles on the existing VNet before the first apply:
 
 ```bash
 az role assignment create \
-  --assignee-object-id "$ARO_RP_OBJ_ID" \
+  --assignee-object-id "$SP_OBJ_ID" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
   --scope "$TF_VAR_vnet_id"
 
 az role assignment create \
-  --assignee-object-id "$SP_OBJ_ID" \
+  --assignee-object-id "$ARO_RP_OBJ_ID" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
   --scope "$TF_VAR_vnet_id"
