@@ -119,29 +119,36 @@ export TF_VAR_resource_group_name="aro-public-rg"
 > terraform import azurerm_resource_group.aro /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$TF_VAR_resource_group_name
 > ```
 
-Create the cluster service principal and capture its credentials:
+Create the cluster service principal and capture its credentials and object ID:
 
 ```bash
 SP_JSON=$(az ad sp create-for-rbac --name "aro-cluster-sp" --skip-assignment -o json)
 export TF_VAR_service_principal_client_id=$(echo "$SP_JSON" | jq -r .appId)
 export TF_VAR_service_principal_client_secret=$(echo "$SP_JSON" | jq -r .password)
+
+# Object ID of the cluster SP (needed for VNet role assignments)
+export TF_VAR_service_principal_object_id=$(az ad sp show \
+  --id "$TF_VAR_service_principal_client_id" --query id -o tsv)
+
+# Object ID of the ARO resource provider SP (well-known client ID)
+export TF_VAR_aro_rp_sp_object_id=$(az ad sp show \
+  --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
 ```
 
-For **greenfield** deployments, that's it — Terraform automatically creates VNet-scoped Network Contributor role assignments for the cluster SP and the ARO RP, and waits for propagation before creating the cluster.
+For **greenfield** deployments, that's it — Terraform automatically creates VNet-scoped Network Contributor role assignments for both service principals and waits 60 seconds for Azure AD propagation before creating the cluster.
 
 For **BYO VNet** deployments, you must manually grant Network Contributor on the VNet to both service principals before running apply:
 
 ```bash
-ARO_RP_OBJ_ID=$(az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv)
-
 az role assignment create \
-  --assignee-object-id "$ARO_RP_OBJ_ID" \
+  --assignee-object-id "$TF_VAR_aro_rp_sp_object_id" \
   --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
   --scope "$TF_VAR_vnet_id"
 
 az role assignment create \
-  --assignee "$TF_VAR_service_principal_client_id" \
+  --assignee-object-id "$TF_VAR_service_principal_object_id" \
+  --assignee-principal-type ServicePrincipal \
   --role "Network Contributor" \
   --scope "$TF_VAR_vnet_id"
 ```
@@ -274,8 +281,10 @@ terraform destroy -var-file=public-cluster.tfvars
 | `resource_group_name` | Resource group to create | *required* |
 | `location` | Azure region | `eastus` |
 | `pull_secret` | Red Hat pull secret (JSON) | *required* |
-| `service_principal_client_id` | Cluster SP client ID | *required* |
-| `service_principal_client_secret` | Cluster SP client secret | *required* |
+| `service_principal_client_id` | Cluster SP client ID (appId) | *required* |
+| `service_principal_client_secret` | Cluster SP client secret (password) | *required* |
+| `service_principal_object_id` | Cluster SP object ID | *required* |
+| `aro_rp_sp_object_id` | ARO RP SP object ID | *required* |
 | `aro_version` | OpenShift version in X.Y.Z format (`az aro get-versions`) | *required* |
 | `public_endpoint` | Public API server and ingress | `true` |
 | `enable_udr` | Enable User Defined Routing | `false` |

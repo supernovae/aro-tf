@@ -38,14 +38,24 @@ variable "pull_secret" {
 # =============================================================================
 
 variable "service_principal_client_id" {
-  description = "Client ID of the service principal used by the ARO cluster"
+  description = "Client ID (appId) of the service principal used by the ARO cluster"
   type        = string
 }
 
 variable "service_principal_client_secret" {
-  description = "Client secret of the service principal used by the ARO cluster"
+  description = "Client secret (password) of the service principal used by the ARO cluster"
   type        = string
   sensitive   = true
+}
+
+variable "service_principal_object_id" {
+  description = "Object ID of the cluster service principal. Get with: az ad sp show --id <appId> --query id -o tsv"
+  type        = string
+}
+
+variable "aro_rp_sp_object_id" {
+  description = "Object ID of the ARO resource provider service principal. Get with: az ad sp show --id f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875 --query id -o tsv"
+  type        = string
 }
 
 # =============================================================================

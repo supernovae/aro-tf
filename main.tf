@@ -15,10 +15,6 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.89"
     }
-    azuread = {
-      source  = "hashicorp/azuread"
-      version = "~> 2.0"
-    }
     time = {
       source  = "hashicorp/time"
       version = "~> 0.9"
@@ -28,16 +24,6 @@ terraform {
 
 provider "azurerm" {
   features {}
-}
-
-# =============================================================================
-# Data Sources
-# =============================================================================
-
-data "azurerm_subscription" "current" {}
-
-data "azuread_service_principal" "aro_rp" {
-  client_id = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 }
 
 # =============================================================================
@@ -110,9 +96,10 @@ resource "azurerm_subnet" "worker" {
 resource "azurerm_role_assignment" "cluster_sp_network_contributor" {
   count = local.create_vnet ? 1 : 0
 
-  scope                = local.vnet_id
-  role_definition_name = "Network Contributor"
-  principal_id         = data.azuread_service_principal.cluster_sp.object_id
+  scope                            = local.vnet_id
+  role_definition_name             = "Network Contributor"
+  principal_id                     = var.service_principal_object_id
+  skip_service_principal_aad_check = true
 }
 
 resource "azurerm_role_assignment" "aro_rp_network_contributor" {
@@ -120,12 +107,8 @@ resource "azurerm_role_assignment" "aro_rp_network_contributor" {
 
   scope                            = local.vnet_id
   role_definition_name             = "Network Contributor"
-  principal_id                     = data.azuread_service_principal.aro_rp.object_id
+  principal_id                     = var.aro_rp_sp_object_id
   skip_service_principal_aad_check = true
-}
-
-data "azuread_service_principal" "cluster_sp" {
-  client_id = var.service_principal_client_id
 }
 
 # Wait for Azure AD role assignment propagation before creating the cluster
