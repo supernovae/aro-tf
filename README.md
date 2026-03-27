@@ -239,7 +239,7 @@ terraform destroy -var-file=public-cluster.tfvars
 | `pull_secret` | Red Hat pull secret (JSON) | *required* |
 | `service_principal_client_id` | Cluster SP client ID | *required* |
 | `service_principal_client_secret` | Cluster SP client secret | *required* |
-| `aro_version` | OpenShift version (`az aro get-versions`) | `4.15` |
+| `aro_version` | OpenShift version in X.Y.Z format (`az aro get-versions`) | *required* |
 | `public_endpoint` | Public API server and ingress | `true` |
 | `enable_udr` | Enable User Defined Routing | `false` |
 | `vnet_id` | Existing VNet ID (BYO mode) | `null` |

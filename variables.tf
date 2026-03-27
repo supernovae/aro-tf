@@ -18,9 +18,13 @@ variable "cluster_domain" {
 }
 
 variable "aro_version" {
-  description = "The OpenShift version to deploy. Run `az aro get-versions -l <region>` to list supported versions."
+  description = "The OpenShift version to deploy in X.Y.Z format (e.g. 4.14.16). Run `az aro get-versions -l <region>` to list supported versions."
   type        = string
-  default     = "4.15"
+
+  validation {
+    condition     = can(regex("^\\d+\\.\\d+\\.\\d+$", var.aro_version))
+    error_message = "aro_version must be in X.Y.Z format (e.g. 4.14.16). List available versions with: az aro get-versions -l <region> -o table"
+  }
 }
 
 variable "pull_secret" {

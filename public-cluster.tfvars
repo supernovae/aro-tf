@@ -8,17 +8,13 @@ public_endpoint     = true
 enable_udr          = false
 worker_node_count   = 3
 
-# Service principal — create with: az ad sp create-for-rbac --name aro-sp
-# Then grant Network Contributor on the VNet and Contributor on the RG.
-# Prefer env vars: export TF_VAR_service_principal_client_id=... TF_VAR_service_principal_client_secret=...
-service_principal_client_id     = ""
-service_principal_client_secret = ""
+# Service principal and pull secret — set via environment variables (see README.md step 3):
+#   export TF_VAR_service_principal_client_id=...
+#   export TF_VAR_service_principal_client_secret=...
+#   export TF_VAR_pull_secret="$(cat pull-secret.txt)"
 
-# Set pull_secret via env var: export TF_VAR_pull_secret="$(cat pull-secret.txt)"
-# See README.md for instructions to obtain one.
-
-# Uncomment to pin a specific OpenShift version (list with: az aro get-versions -l eastus)
-# aro_version = "4.15"
+# OpenShift version in X.Y.Z format (list with: az aro get-versions -l eastus -o table)
+aro_version = "4.20.15"
 
 # VM sizes (defaults shown)
 # master_vm_size      = "Standard_D8s_v3"

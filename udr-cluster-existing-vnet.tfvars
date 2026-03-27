@@ -15,17 +15,16 @@ vnet_id          = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>
 master_subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<master-subnet>"
 worker_subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<worker-subnet>"
 
-# Service principal — see README.md for setup instructions.
-service_principal_client_id     = ""
-service_principal_client_secret = ""
-
-# Set pull_secret via env var: export TF_VAR_pull_secret="$(cat pull-secret.txt)"
+# Service principal and pull secret — set via environment variables (see README.md step 3):
+#   export TF_VAR_service_principal_client_id=...
+#   export TF_VAR_service_principal_client_secret=...
+#   export TF_VAR_pull_secret="$(cat pull-secret.txt)"
 
 # Supply your own route table instead of letting Terraform create one:
 # udr_route_table_id = "/subscriptions/<subscription-id>/resourceGroups/<network-rg>/providers/Microsoft.Network/routeTables/<rt-name>"
 
-# Uncomment to pin a specific OpenShift version
-# aro_version = "4.15"
+# OpenShift version in X.Y.Z format (list with: az aro get-versions -l eastus -o table)
+aro_version = "4.20.15"
 
 # VM sizes
 # master_vm_size      = "Standard_D8s_v3"
